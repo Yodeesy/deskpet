@@ -46,8 +46,8 @@ def create_uniform_spritesheet(frames_dir, output_filepath, cols=8):
 
     # 确定最终的统一帧尺寸
     # 可以根据原始帧的宽高比调整，这里我们使用最大裁剪尺寸作为统一尺寸
-    UNIFORM_FRAME_WIDTH = max_cropped_width
-    UNIFORM_FRAME_HEIGHT = max_cropped_height
+    UNIFORM_FRAME_WIDTH = math.ceil(max_cropped_width)
+    UNIFORM_FRAME_HEIGHT = math.ceil(max_cropped_height)
 
     # 为了避免裁剪后尺寸过小而导致 Pygame 绘制问题，可以给 UNIFORM_FRAME_WIDTH 和 HEIGHT 设置一个最小值
     # 例如：UNIFORM_FRAME_WIDTH = max(max_cropped_width, 50)
@@ -83,8 +83,8 @@ def create_uniform_spritesheet(frames_dir, output_filepath, cols=8):
 
 
 if __name__ == "__main__":
-    FRAMES_FOLDER = "../extracted_sprites"
-    OUTPUT_SPRITESHEET = "../assets/idle_loop_fixed.png"
+    FRAMES_FOLDER = "../extracted_sprites/dragging/1"
+    OUTPUT_SPRITESHEET = "../assets/dragging_1.png"
     SPRITESHEET_COLS = 8
 
     create_uniform_spritesheet(FRAMES_FOLDER, OUTPUT_SPRITESHEET, cols=SPRITESHEET_COLS)
