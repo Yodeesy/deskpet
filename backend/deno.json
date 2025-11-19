@@ -1,0 +1,13 @@
+{
+    "tasks": {
+        "dev": "deno fmt && deno run --watch --allow-net --allow-read --allow-write --unstable-kv main.js"
+    },
+    "imports": {
+        "@std/assert": "jsr:@std/assert@1"
+    },
+    "fmt": {
+        "semiColons": false,
+        "singleQuote": true,
+        "indentWidth": 4
+    }
+}
