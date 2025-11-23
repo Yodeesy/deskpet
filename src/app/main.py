@@ -2,7 +2,7 @@
 
 import customtkinter as ctk
 import tkinter as tk
-from config_manager import load_config
+from src.app.config_manager import load_config
 from pet_desktop import DesktopPet
 import sys
 
@@ -90,6 +90,13 @@ ANIMATION_CONFIG = {
         "filepath": "assets/result.jpg",
         "frame_w": 150,
         "frame_h": 150
+    },
+    "bye": {
+        "filepath": "assets/bye.png",
+        "frame_w": 350,
+        "frame_h": 350,
+        "total_frames": 120,
+        "ranges": {"bye": (0, 119)}
     },
 }
 

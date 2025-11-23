@@ -1,8 +1,8 @@
 # settings_gui.py
 
 import pygame
-from config_manager import save_config
-from pet_states import DisplayState, IdleState
+from src.app.config_manager import save_config
+from src.app.pet_states import DisplayState, IdleState, ByeState
 import customtkinter as ctk
 from tkinter import messagebox
 import os
@@ -392,9 +392,9 @@ class SettingsWindow(ctk.CTkToplevel):
     def confirm_exit(self):
         """Prompts user for confirmation and initiates application exit."""
         if messagebox.askyesno("Confirm Exit", "Are you sure you want to exit the desktop pet program?", parent=self):
-            self.pet.running = False  # Set the main loop exit flag
-            self.pet.tk_root.quit()  # Quit the Tkinter main loop
             self.destroy()  # Close the settings window
+            # change state to say bye
+            self.pet.change_state(ByeState(self.pet))
 
     def close_window(self):
         """Closes the settings window and returns the pet to the Idle state if it was following."""

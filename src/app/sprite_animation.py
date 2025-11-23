@@ -28,6 +28,7 @@ def load_frames_from_sheet(filepath, frame_w, frame_h, target_w, target_h, targe
 
     try:
         sprite_sheet = pygame.image.load(absolute_path).convert_alpha()
+
     except Exception as e:
         # Failed to load image, create a visible test image as fallback.
         sprite_sheet = pygame.Surface((frame_w, frame_h), pygame.SRCALPHA)
@@ -84,6 +85,7 @@ class AnimationController:
         'magic_start': {'type': 'one_shot'},
         'magic_keep': {'type': 'loop_reverse'},
         'fishing': {'type': 'one_shot'},
+        'bye': {'type': 'one_shot'},
     }
 
     def __init__(self, animations_data, animation_ranges):

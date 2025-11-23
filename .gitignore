@@ -1,10 +1,8 @@
 /temp
 
 # images
-/assets
 /extracted_sprites
 /build
 /dist
 
 main.spec
-test_gui.py

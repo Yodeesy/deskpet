@@ -340,5 +340,20 @@ class FishingState(PetState):
         else:
             self.pet.handle_fishing_result(False)
 
-        # 3. 切换回闲置状态
-        self.pet.change_state(IdleState(self.pet))
+class ByeState(PetState):
+    """
+    告别动画，用户退出程序时播放
+    """
+    def enter(self):
+        print(f"Enter Bye State.")
+        self.pet.animator.set_animation('bye')
+
+    def update(self):
+        super().update()
+        if self.pet.animator.check_finished_and_advance():
+            print(f"Bye State finished.")
+            self.pet.state = None
+            self.pet.trigger_exit()
+
+    def exit(self):
+        pass

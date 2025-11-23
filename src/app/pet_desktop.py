@@ -6,10 +6,10 @@ import win32con
 import win32gui
 # Import created modules
 import window_manager as wm
-from pet_states import IdleState, TeleportState, MagicState, FishingState
+from pet_states import IdleState, TeleportState, MagicState, FishingState, ByeState
 from settings_gui import SettingsWindow
 from sprite_animation import load_frames_from_sheet, AnimationController
-from effects import DynamicEffectController
+from src.app.effects import DynamicEffectController
 
 
 class DesktopPet:
@@ -117,6 +117,15 @@ class DesktopPet:
         )
         all_animations['fishing'] = fishing_frames
         self.animation_ranges['fishing'] = fishing_config["ranges"]["fishing"]
+
+        # Load Bye animation
+        bye_config = animation_config["bye"]
+        bye_frames = load_frames_from_sheet(
+            bye_config["filepath"], bye_config["frame_w"], bye_config["frame_h"],
+            self.width, self.height, bye_config["total_frames"]
+        )
+        all_animations['bye'] = bye_frames
+        self.animation_ranges['bye'] = bye_config["ranges"]["bye"]
 
         # Load all Dragging options
         dragging_options = animation_config["dragging"]
@@ -457,6 +466,12 @@ class DesktopPet:
             self.current_window_pos[0],
             self.current_window_pos[1]
         )
+
+    def trigger_exit(self):
+        """Triggered by Byestate"""
+        self.running = False  # Set the main loop exit flag
+        if self.tk_root:
+            self.tk_root.quit()
 
     def run(self):
         """Main application loop."""
