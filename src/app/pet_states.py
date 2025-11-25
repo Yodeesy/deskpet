@@ -235,6 +235,7 @@ class TeleportState(PetState):
     """
 
     def enter(self):
+        self.pet.angry_counter = 0  # Reset pet's angry counter
         # Set animation: one-shot 'teleport'
         self.pet.animator.set_animation('teleport')
 
@@ -432,9 +433,10 @@ class AngryState(PetState):
     def update(self):
         super().update()
         if self.pet.animator.check_finished_and_advance():
-            if random.random() < self.pet.super_angry_possibility:
+            if self.pet.angry_counter >= 10:
                 self.pet.change_state(TeleportState(self.pet))
             else:
+                self.pet.angry_counter += 1
                 self.pet.change_state(IdleState(self.pet))
 
     def exit(self):

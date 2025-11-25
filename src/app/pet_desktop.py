@@ -28,12 +28,12 @@ class DesktopPet:
         self.fishing_cooldown_ms = self.config.get("fishing_cooldown_minutes", 60) * 60 * 1000
         self.upset_interval_ms = self.config.get("upset_interval_minutes", 7) * 60 * 1000
         self.angry_possibility = self.config.get("angry_possibility", 0.5)
-        self.super_angry_possibility = self.config.get("super_angry_possibility", 0.5)
 
         # Timer start point (in milliseconds since Pygame init)
         self.rest_timer_start_time = pygame.time.get_ticks()
         self.fishing_timer_start_time = pygame.time.get_ticks()
         self.upset_timer_start_time = pygame.time.get_ticks()
+        self.angry_counter = 0
 
         # --- Size and Performance ---
         self.width = width
