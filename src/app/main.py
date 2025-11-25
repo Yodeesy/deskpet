@@ -2,7 +2,7 @@
 
 import customtkinter as ctk
 import tkinter as tk
-from src.app.config_manager import load_config
+from config_manager import load_config
 from pet_desktop import DesktopPet
 import sys
 
@@ -97,6 +97,20 @@ ANIMATION_CONFIG = {
         "frame_h": 350,
         "total_frames": 120,
         "ranges": {"bye": (0, 119)}
+    },
+    "angry": {
+        "filepath": "assets/angry.png",
+        "frame_w": 350,
+        "frame_h": 350,
+        "total_frames": 120,
+        "ranges": {"angry": (0, 119)}
+    },
+    "upset": {
+        "filepath": "assets/upset.png",
+        "frame_w": 350,
+        "frame_h": 350,
+        "total_frames": 120,
+        "ranges": {"upset": (0, 119)}
     },
 }
 

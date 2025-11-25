@@ -6,10 +6,10 @@ import win32con
 import win32gui
 # Import created modules
 import window_manager as wm
-from pet_states import IdleState, TeleportState, MagicState, FishingState, ByeState
+from pet_states import IdleState, TeleportState, MagicState, FishingState, UpsetState
 from settings_gui import SettingsWindow
 from sprite_animation import load_frames_from_sheet, AnimationController
-from src.app.effects import DynamicEffectController
+from effects import DynamicEffectController
 
 
 class DesktopPet:
@@ -26,10 +26,14 @@ class DesktopPet:
         self.rest_interval_ms = self.config.get("rest_interval_minutes", 60) * 60 * 1000
         self.rest_duration_ms = self.config.get("rest_duration_seconds", 30) * 1000
         self.fishing_cooldown_ms = self.config.get("fishing_cooldown_minutes", 60) * 60 * 1000
+        self.upset_interval_ms = self.config.get("upset_interval_minutes", 7) * 60 * 1000
+        self.angry_possibility = self.config.get("angry_possibility", 0.5)
+        self.super_angry_possibility = self.config.get("super_angry_possibility", 0.5)
 
         # Timer start point (in milliseconds since Pygame init)
         self.rest_timer_start_time = pygame.time.get_ticks()
         self.fishing_timer_start_time = pygame.time.get_ticks()
+        self.upset_timer_start_time = pygame.time.get_ticks()
 
         # --- Size and Performance ---
         self.width = width
@@ -127,6 +131,24 @@ class DesktopPet:
         all_animations['bye'] = bye_frames
         self.animation_ranges['bye'] = bye_config["ranges"]["bye"]
 
+        # Load Upset animation
+        upset_config = animation_config["upset"]
+        upset_frames = load_frames_from_sheet(
+            upset_config["filepath"], upset_config["frame_w"], upset_config["frame_h"],
+            self.width, self.height, upset_config["total_frames"]
+        )
+        all_animations['upset'] = upset_frames
+        self.animation_ranges['upset'] = upset_config["ranges"]["upset"]
+
+        # Load Angry animation
+        angry_config = animation_config["angry"]
+        angry_frames = load_frames_from_sheet(
+            angry_config["filepath"], angry_config["frame_w"], angry_config["frame_h"],
+            self.width, self.height, angry_config["total_frames"]
+        )
+        all_animations['angry'] = angry_frames
+        self.animation_ranges['angry'] = angry_config["ranges"]["angry"]
+
         # Load all Dragging options
         dragging_options = animation_config["dragging"]
         self.available_drag_prefixes = []  # e.g., ['drag_A', 'drag_B']
@@ -190,6 +212,7 @@ class DesktopPet:
         # Check the reminder timers
         self._check_rest_timer()
         self._check_fishing_timer()
+        self._check_upset_timer()
 
     def _check_rest_timer(self):
         """
@@ -218,6 +241,15 @@ class DesktopPet:
         if (self.state.__class__ is IdleState) and (elapsed_time >= self.fishing_cooldown_ms):
             # Trigger state change: Enter Fishing state
             self.change_state(FishingState(self))
+
+    def _check_upset_timer(self):
+        """
+        Checks if the upset has been reached and triggers the Upset State if conditions are met.
+        """
+        current_time = pygame.time.get_ticks()
+        elapsed_time = current_time - self.upset_timer_start_time
+        if (self.state.__class__ is IdleState) and (elapsed_time >= self.upset_interval_ms):
+            self.change_state(UpsetState(self))
 
     def smooth_move_to_target(self, target_x, target_y):
         """
@@ -388,6 +420,13 @@ class DesktopPet:
         """
         self.fishing_timer_start_time = pygame.time.get_ticks()
 
+    def reset_upset_timer(self):
+        """
+        Resets the upset timer, starting the interval countdown from the current time.
+        Called after the upset state exits.
+        """
+        self.upset_timer_start_time = pygame.time.get_ticks()
+
     def update_rest_config(self, interval_ms, duration_ms):
         """
         Called by the GUI to update the rest reminder interval and duration.
@@ -468,7 +507,7 @@ class DesktopPet:
         )
 
     def trigger_exit(self):
-        """Triggered by Byestate"""
+        """Triggered by ByeState"""
         self.running = False  # Set the main loop exit flag
         if self.tk_root:
             self.tk_root.quit()

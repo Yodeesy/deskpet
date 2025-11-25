@@ -99,6 +99,7 @@ class DraggingState(PetState):
     def exit(self):
         self.pet.drag_start_pos = None
         self.pet.drag_window_pos = None
+        self.pet.reset_upset_timer()  # Reset upset timer
 
     def handle_event(self, event):
         pass
@@ -127,9 +128,12 @@ class DraggingState(PetState):
                 self.current_drag_stage = 'hold'
                 self.can_release = True
 
-            # Transition from 'release' back to Idle
+            # Transition from 'release' back to Idle, or to Angry
             elif 'release' in current_anim_name:
-                self.pet.change_state(IdleState(self.pet))
+                if random.random() < self.pet.angry_possibility:
+                    self.pet.change_state(AngryState(self.pet))
+                else:
+                    self.pet.change_state(IdleState(self.pet))
                 return
 
         # 2. Update position only if held (in 'start' or 'hold' phase)
@@ -354,6 +358,84 @@ class ByeState(PetState):
             print(f"Bye State finished.")
             self.pet.state = None
             self.pet.trigger_exit()
+
+    def exit(self):
+        pass
+
+class UpsetState(PetState):
+    """
+    用户在一定时间内未互动触发
+    """
+    def enter(self):
+        print(f"Enter Upset State.")
+        self._move_to_random_corner()
+        self.pet.animator.set_animation('upset')
+
+    def _move_to_random_corner(self):
+        """计算并移动宠物到屏幕的四个角落之一。"""
+
+        # 获取宠物尺寸和屏幕尺寸
+        pet_w = self.pet.width
+        pet_h = self.pet.height
+        screen_w = self.pet.full_screen_width
+        screen_h = self.pet.full_screen_height
+
+        # 定义四个角落的目标位置 (x, y)
+        # 注意：需要减去宠物自身的宽度/高度，才能让宠物的左上角位于目标点
+        corners = [
+            (0, 0),  # 左上角
+            (screen_w - pet_w, 0),  # 右上角
+            (0, screen_h - pet_h),  # 左下角
+            (screen_w - pet_w, screen_h - pet_h)  # 右下角
+        ]
+
+        # 随机选择一个角落
+        target_x, target_y = random.choice(corners)
+
+        # 立即移动窗口到目标位置 (使用 DesktopPet 中已有的 Win32 移动函数)
+        wm.set_window_position(
+            self.pet.hwnd,
+            target_x,
+            target_y,
+            pet_w,
+            pet_h
+        )
+
+        # 更新 DesktopPet 内部存储的位置信息
+        self.pet.current_window_pos[0] = target_x
+        self.pet.current_window_pos[1] = target_y
+
+    def update(self):
+        super().update()
+
+    def handle_event(self, event):
+        """Detects left mouse button down for dragging."""
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # Left click
+            mouse_rel_pos = pygame.mouse.get_pos()
+
+            # Check if the click is on a non-transparent area of the sprite
+            if self.pet.is_click_on_sprite(mouse_rel_pos[0], mouse_rel_pos[1]):
+                # Switch to DraggingState
+                self.pet.change_state(DraggingState(self.pet))
+
+    def exit(self):
+        print(f"Exiting Upset State.")
+        self.pet.reset_upset_timer()
+
+class AngryState(PetState):
+    """
+    用户执行dragging后概率触发
+    """
+    def enter(self):
+        self.pet.animator.set_animation('angry')
+
+    def update(self):
+        super().update()
+        if self.pet.animator.check_finished_and_advance():
+            if random.random() < self.pet.super_angry_possibility:
+                self.pet.change_state(TeleportState(self.pet))
+            else:
+                self.pet.change_state(IdleState(self.pet))
 
     def exit(self):
         pass

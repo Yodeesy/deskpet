@@ -86,6 +86,8 @@ class AnimationController:
         'magic_keep': {'type': 'loop_reverse'},
         'fishing': {'type': 'one_shot'},
         'bye': {'type': 'one_shot'},
+        'upset': {'type': 'loop_reverse'},
+        "angry": {"type": "one_shot"},
     }
 
     def __init__(self, animations_data, animation_ranges):
