@@ -3,7 +3,7 @@
 // const config = JSON.parse(Deno.readTextFileSync('./src/backend/config.json'))
 const config = {
     'pathname': '/zst',
-    'staticpath': './static',
+    'staticpath': './src/backend/static',
 }
 const NotFound404 = () => new Response('404 Not Found', { status: 404 })
 
@@ -12,9 +12,8 @@ const handleStaticFile = async (req) => {
     const path = decodeURIComponent(url.pathname)
 
     // 限制在 static 目录下
-    const filePath = `${config.staticpath}${
-        path === '/' ? '/index.html' : path
-    }`
+    const filePath = `${config.staticpath}${path === '/' ? '/index.html' : path
+        }`
 
     try {
         await Deno.stat(filePath)
