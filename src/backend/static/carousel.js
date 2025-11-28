@@ -64,7 +64,7 @@ function autoPlay() {
     autoPlayInterval = setInterval(() => {
         let nextIndex = (currentIndex + 1) % imgs.length
         switchImg(nextIndex)
-    }, 3000) // 3秒切换一次
+    }, 5000) // 5秒切换一次
 }
 
 // 鼠标悬停暂停自动播放
