@@ -119,6 +119,29 @@ class SettingsWindow(ctk.CTkToplevel):
         self.main_frame = ctk.CTkFrame(self)
         self.main_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
+        # 为Intro按钮创建单独的容器，不设置列权重
+        intro_container = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        intro_container.grid(row=0, column=0, sticky="w")
+
+        # --- NEW: Introduction Website Button ---
+        intro_button = ctk.CTkButton(
+            intro_container,
+            text="🦊 Intro Site",
+            command=self.open_intro_website,
+            fg_color=("#1e90ff", "#0066cc"),
+            hover_color=("#4169e1", "#0047ab"),
+            width=79,
+            height=40,
+            font=("Arial", 15, "bold"),
+            corner_radius=10,
+            text_color="#ffffff",
+            border_width=1,
+            border_color="white"
+        )
+        # 放置在 Row 0
+        intro_button.grid(row=0, column=0, padx=5, pady=(5, 10), sticky="ew")
+        intro_button.configure(cursor="hand2")
+
         # --- 0. GitHub Link  ---
         link_label = ctk.CTkLabel(
             self.main_frame,
@@ -130,8 +153,7 @@ class SettingsWindow(ctk.CTkToplevel):
         link_label.bind("<Button-1>", self.open_github_link)
         # 增加鼠标悬停手型
         link_label.configure(cursor="hand2")
-        # 将其放置在顶部
-        link_label.grid(row=0, column=0, padx=5, pady=(5, 5), sticky="n")
+        link_label.grid(row=1, column=0, padx=5, pady=(5, 5), sticky="n")
 
         # --- 1. Autostart Setting ---
         autostart_check = ctk.CTkCheckBox(
@@ -142,11 +164,11 @@ class SettingsWindow(ctk.CTkToplevel):
             text_color="#D4D4D4",
             font=ctk.CTkFont(weight="bold")
         )
-        autostart_check.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        autostart_check.grid(row=2, column=0, padx=5, pady=5, sticky="ew")
 
         # --- 2. Eye Rest Reminder Area ---
         rest_frame = ctk.CTkFrame(self.main_frame)
-        rest_frame.grid(row=2, column=0, padx=5, pady=10, sticky="ew")
+        rest_frame.grid(row=3, column=0, padx=5, pady=10, sticky="ew")
 
         # Area Title
         ctk.CTkLabel(
@@ -176,7 +198,7 @@ class SettingsWindow(ctk.CTkToplevel):
             fg_color="#e74c3c",  # Dark red background
             hover_color="#c0392b"
         )
-        exit_button.grid(row=3, column=0, padx=5, pady=10, sticky="ew")
+        exit_button.grid(row=4, column=0, padx=5, pady=10, sticky="ew")
 
     def save_rest_settings(self):
         """Validates input, saves rest settings, updates the pet, and saves config to file."""
@@ -225,6 +247,10 @@ class SettingsWindow(ctk.CTkToplevel):
         except Exception as e:
             messagebox.showerror("Error", f"An unexpected error occurred: {e}", parent=self)
 
+    def open_intro_website(self):
+        """Link to the pet's introduction website."""
+        intro_url = "https://yodeesy.github.io/DeskFox/src/backend/static/index.html"
+        webbrowser.open_new_tab(intro_url)
     def open_github_link(self, event=None):
         """Link to GitHub repo."""
         github_url = "https://github.com/Yodeesy/DeskFox.git"

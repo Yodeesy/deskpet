@@ -529,15 +529,22 @@ class DesktopPet:
             check_tk_root()
 
             # --- Event Handling ---
+            is_exiting = self.state.__class__.__name__ == 'ByeState'
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
                     break
+                # 检查右键点击事件
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
-                    # Right-click: open settings window
-                    self.open_settings()
-
-                self.state.handle_event(event)
+                    # 只有在非退出状态时，才允许右键打开设置
+                    if not is_exiting:
+                        # Right-click: open settings window
+                        self.open_settings()
+                    # 如果处于 ByeState，直接忽略该事件
+                    continue
+                # 仅将事件传递给状态机，如果宠物不在退出中
+                if not is_exiting:
+                    self.state.handle_event(event)
 
             if not self.running:
                 break
