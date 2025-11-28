@@ -26,7 +26,7 @@
     left: 0;
     top: 0;
     /* transition: background 2s; */
-    animation: spin 12s infinite ease;
+    animation: spin 20s infinite ease;
     background: conic-gradient(red, yellow, lime, blue, magenta, red);
 }
 
@@ -76,9 +76,9 @@
 }
 
 .des-box {
-    height: 100%;
+    height: 70%;
     width: 600px;
-    background-color: antiquewhite;
+    background-color: rgb(165, 193, 224);
     border-radius: 30px;
     padding: 30px;
 }

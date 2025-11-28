@@ -33,6 +33,10 @@
     position: relative;
     height: 100%;
 }
+.des-carousel-track p span{
+    font-size: 30px;
+    margin-bottom: 10px;
+}
 .des-carousel-track p{
     margin: 0;
     padding: 0;
