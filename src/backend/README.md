@@ -5,7 +5,6 @@
 在`config.json`文件中可以配置你喜欢的路径名，默认端口号是8000（当然，可以改）。
 
 ```json
-// congfig.json
 {
     "pathname": "/zst"
 }
@@ -17,7 +16,7 @@
 
 开发环境： `http://127.0.0.1:8000/zst`
 
-生产环境： `https://域名/zst`
+生产环境： `https://deskfox.deno.dev//zst`
 
 #### 请求方法
 
@@ -56,8 +55,6 @@ POST
 `data`: 写入的数据
 
 ```json
-//示例
-//请求体
 {
     "index": "1",
     "data": "Hello, deskfox!"

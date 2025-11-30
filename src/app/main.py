@@ -116,10 +116,19 @@ ANIMATION_CONFIG = {
 
 # Default configuration used if the config file does not exist
 DEFAULT_CONFIG = {
-    "rest_interval_minutes": 60,
+    "rest_interval_minutes": 30,
     "rest_duration_seconds": 30,
-    "current_x": 100,  # Saved position at last close
-    "current_y": 100
+    "current_x": 100,
+    "current_y": 100,
+    "web_service_url": "https://deskfox.deno.dev",
+    "pathname": "/zst",
+    "max_fox_story_num": 7,
+    "last_read_index": 0,
+    "fox_story_possibility": 0.61,
+    "fishing_cooldown_minutes": 10,
+    "fishing_success_rate": 0.6489,
+    "upset_interval_minutes": 7,
+    "angry_possibility": 0.54
 }
 
 # Load application configuration at startup
@@ -143,6 +152,8 @@ if __name__ == "__main__":
 
         # 3. Store tk_root in the pet instance for use by SettingsWindow and States
         pet.tk_root = tk_root
+        # 启动轮询（主线程调用）
+        pet._start_queue_poller()
 
         # 4. Start the main application loop
         pet.run()

@@ -1,8 +1,8 @@
 # settings_gui.py
 
 import pygame
-from src.app.config_manager import save_config
-from src.app.pet_states import DisplayState, IdleState, ByeState
+from config_manager import save_config
+from pet_states import DisplayState, IdleState, ByeState
 import customtkinter as ctk
 from tkinter import messagebox
 import os
@@ -249,7 +249,7 @@ class SettingsWindow(ctk.CTkToplevel):
 
     def open_intro_website(self):
         """Link to the pet's introduction website."""
-        intro_url = "https://yodeesy.github.io/DeskFox/src/backend/static/index.html"
+        intro_url = "https://deskfox.deno.dev"
         webbrowser.open_new_tab(intro_url)
     def open_github_link(self, event=None):
         """Link to GitHub repo."""

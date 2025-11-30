@@ -4,12 +4,17 @@ import pygame
 import sys
 import win32con
 import win32gui
+import queue
+import traceback
+from typing import Union, Dict
 # Import created modules
 import window_manager as wm
 from pet_states import IdleState, TeleportState, MagicState, FishingState, UpsetState
 from settings_gui import SettingsWindow
 from sprite_animation import load_frames_from_sheet, AnimationController
 from effects import DynamicEffectController
+from story_manager import StoryManager
+from story_display import show_story_prompt
 
 
 class DesktopPet:
@@ -25,9 +30,13 @@ class DesktopPet:
         self.config = initial_config
         self.rest_interval_ms = self.config.get("rest_interval_minutes", 60) * 60 * 1000
         self.rest_duration_ms = self.config.get("rest_duration_seconds", 30) * 1000
-        self.fishing_cooldown_ms = self.config.get("fishing_cooldown_minutes", 60) * 60 * 1000
+        self.fishing_cooldown_ms = self.config.get("fishing_cooldown_minutes", 10) * 60 * 1000
         self.upset_interval_ms = self.config.get("upset_interval_minutes", 7) * 60 * 1000
         self.angry_possibility = self.config.get("angry_possibility", 0.5)
+        self.fishing_success_rate = self.config.get('fishing_success_rate', 0.50)
+        self.fox_story_possibility = self.config.get('fox_story_possibility', 0.5)
+        self.max_fox_story_num = self.config.get("max_fox_story_num", 7)
+        self.last_read_index = self.config.get("last_read_index", 0)
 
         # Timer start point (in milliseconds since Pygame init)
         self.rest_timer_start_time = pygame.time.get_ticks()
@@ -45,6 +54,11 @@ class DesktopPet:
         self.fps = fps
         self.running = True
         self.clock = pygame.time.Clock()
+
+        # --- Web Service and Story Management ---
+        self.web_service_url = self.config.get("web_service_url", "https://deskfox.deno.dev")
+        self.pathname = self.config.get("pathname", "/zst")
+        self.story_manager = StoryManager(self, self.web_service_url, self.pathname)
 
         # --- Window Setup ---
         pygame.display.set_mode((self.width, self.height), pygame.NOFRAME)
@@ -188,6 +202,73 @@ class DesktopPet:
         self.settings_window = None
         self.dynamic_effect = None
         self.tk_root = None  # Tkinter root will be set by main.py
+        # 队列初始化
+        self._tk_queue = queue.Queue()
+        # 用于存储 after() 返回的 ID，以便取消重复的轮询
+        self._poller_id = None
+
+    # --- Queue Poller Methods ---
+    def _start_queue_poller(self):
+        """
+        [主執行緒調用] 啟動週期性輪詢隊列的機制。
+        必須在 self.tk_root 被賦值且 GUI 啟動後調用一次。
+        """
+        if self._poller_id:
+            try:
+                self.tk_root.after_cancel(self._poller_id)
+            except Exception:
+                pass
+
+        # 每 100ms 檢查一次隊列
+        self._poller_id = self.tk_root.after(100, self._process_queue)
+        print("DEBUG: Queue poller started.", flush=True)
+
+    def _process_queue(self):
+        """
+        [主執行緒調用] 持續處理隊列中的所有待處理項。
+        此方法是線程安全的，因為它始終在主執行緒中執行。
+        """
+        try:
+            # 循環直到隊列為空
+            while True:
+                # 使用 get_nowait() 進行非阻塞獲取
+                item = self._tk_queue.get_nowait()
+
+                # item 結構: ("story_result", is_successful, payload, story_id)
+                if isinstance(item, tuple) and item[0] == "story_result":
+                    _, is_successful, payload, story_id = item
+                    # 安全地在主執行緒調用處理函數
+                    self.handle_fishing_result(is_successful=is_successful, story_data_or_error=payload, story_id=story_id)
+                else:
+                    print(f"WARNING: Unknown item in queue: {item}", flush=True)
+
+        except queue.Empty:
+            # 隊列為空，這是正常退出
+            pass
+        except Exception as e:
+            # 捕獲處理隊列項時的意外錯誤
+            print(f"FATAL ERROR: Failed to process item in queue: {e}", file=sys.stderr, flush=True)
+            traceback.print_exc(file=sys.stderr)
+
+        finally:
+            # 無論如何，都再次安排下一次輪詢
+            if self.tk_root and self.tk_root.winfo_exists():
+                self._poller_id = self.tk_root.after(100, self._process_queue)
+            else:
+                print("WARNING: Tkinter root destroyed, stopping poller.", flush=True)
+
+    def handle_fishing_result(self, is_successful, story_data_or_error: Union[Dict, str], story_id=None):
+        """
+        [在主线程中被调用] 处理异步钓鱼结果。如果成功，则调用 GUI 函数展示故事。
+        """
+        if is_successful and story_data_or_error and story_id:
+            self.update_fox_story_index()
+            show_story_prompt(self.tk_root, story_data_or_error, story_id, self)
+
+        else:
+            fail_message = story_data_or_error if story_data_or_error else "网络君罢工了T-T\n漂流瓶自己跑走了..."
+            show_story_prompt(self.tk_root, fail_message)
+
 
     def start_dynamic_effect(self):
         """Initializes and starts the dynamic effect controller (e.g., rain)."""
@@ -238,7 +319,7 @@ class DesktopPet:
         # Conditions for triggering rest:
         # 1. Pet must be in the IdleState (avoiding interruption during interaction)
         # 2. Elapsed time must be greater than or equal to the interval
-        if (self.state.__class__ is IdleState) and (elapsed_time >= self.fishing_cooldown_ms):
+        if isinstance(self.state, IdleState) and (elapsed_time >= self.fishing_cooldown_ms):
             # Trigger state change: Enter Fishing state
             self.change_state(FishingState(self))
 
@@ -426,6 +507,18 @@ class DesktopPet:
         Called after the upset state exits.
         """
         self.upset_timer_start_time = pygame.time.get_ticks()
+
+    def update_fox_story_index(self):
+        """
+        index += 1 when the index <= the max num,
+        or reset the index to zero.
+        """
+        if self.last_read_index + 1 >= self.max_fox_story_num:
+            self.last_read_index = 0
+        else:
+            self.last_read_index += 1
+
+        self.tk_root.config["last_read_index"] = self.last_read_index
 
     def update_rest_config(self, interval_ms, duration_ms):
         """

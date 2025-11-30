@@ -302,7 +302,8 @@ class FishingState(PetState):
     def __init__(self, pet):
         super().__init__(pet)
         # 钓鱼成功率（本地处理）
-        self.success_rate = self.pet.config.get('fishing_success_rate', 0.50)
+        self.success_rate = self.pet.fishing_success_rate
+        self.fox_story_possibility = self.pet.fox_story_possibility
 
     def enter(self):
         """进入钓鱼状态：切换到钓鱼动画"""
@@ -316,7 +317,9 @@ class FishingState(PetState):
 
         # 🌟 关键：检查动画是否播放完毕 🌟
         if self.pet.animator.check_finished_and_advance():
-            self.handle_fishing_finished()
+            if not hasattr(self, '_fetch_started'):
+                self.handle_fishing_finished()  # 启动异步获取故事
+                self._fetch_started = True
             self.pet.change_state(IdleState(self.pet))
 
     def handle_fishing_finished(self):
@@ -331,19 +334,18 @@ class FishingState(PetState):
         story_id_to_fetch = None
 
         if is_successful:
-            # 假设 self.pet.story_manager 存在
-            story_id_to_fetch = self.pet.story_manager.get_next_story_id()
+            if random.random() < self.fox_story_possibility:
+                story_id_to_fetch = self.pet.story_manager.get_next_story_id()
+            else:
+                story_id_to_fetch = random.choice(range(11, 20))
 
             if story_id_to_fetch is not None:
-                # 假设 fetch_story_sync() 存在
-                story_content = self.pet.story_manager.fetch_story_sync(story_id_to_fetch)
-
-            if story_content:
-                self.pet.handle_fishing_result(True, story_content, story_id_to_fetch)
+                # 🌟 关键：启动异步获取，不阻塞主线程 🌟
+                self.pet.story_manager.fetch_story_async(story_id_to_fetch)
             else:
                 self.pet.handle_fishing_result(False, "漂流瓶自己跑走了...（真的不是狐狸放跑的哇！！）")
         else:
-            self.pet.handle_fishing_result(False)
+            self.pet.handle_fishing_result(False, "狐狸什么都没钓到T-T")
 
 class ByeState(PetState):
     """

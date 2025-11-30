@@ -7,7 +7,6 @@ from utils import resource_path
 
 CONFIG_FILE_NAME = resource_path("src/config/pet_config.json")
 
-
 def load_config(default_config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Attempts to load the configuration from a file.
