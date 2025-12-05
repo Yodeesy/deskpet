@@ -68,6 +68,68 @@ def load_frames_from_sheet(filepath, frame_w, frame_h, target_w, target_h, targe
 
     return frames
 
+def load_animation(pet_instance, animation_name, config_key=None, no_scaling=False, is_magic_type=False):
+    """
+    加载动画帧和范围
+
+    Args:
+        pet_instance: pet实例对象
+        animation_name: 动画名称（作为字典键）
+        config_key: 配置中的键名（如果与animation_name不同时使用）
+        no_scaling: 是否不缩放帧
+        is_magic_type: 是否是magic类型（有子范围）
+    """
+    pet = pet_instance
+    if config_key is None:
+        config_key = animation_name
+
+    anim_config = pet.animation_config[config_key]
+    frames = load_frames_from_sheet(
+        anim_config["filepath"],
+        anim_config["frame_w"],
+        anim_config["frame_h"],
+        pet.width,
+        pet.height,
+        anim_config["total_frames"],
+        no_scaling=no_scaling
+    )
+
+    pet.all_animations[animation_name] = frames
+
+    if is_magic_type:
+        # 处理有子范围的动画（如magic）
+        for sub_name, ranges in anim_config["ranges"].items():
+            pet.animation_ranges[f"{sub_name}"] = ranges
+    else:
+        # 处理普通动画范围
+        pet.animation_ranges[animation_name] = anim_config["ranges"][animation_name]
+
+def load_dragging_animations(pet_instance):
+    """加载所有拖拽动画变体"""
+    pet = pet_instance
+    dragging_options = pet.animation_config["dragging"]
+    pet.available_drag_prefixes = []
+
+    for group in dragging_options:
+        prefix = group["prefix"]
+        pet.available_drag_prefixes.append(prefix)
+
+        drag_frames = load_frames_from_sheet(
+            group["filepath"],
+            group["frame_w"],
+            group["frame_h"],
+            pet.width,
+            pet.height,
+            group["total_frames"]
+        )
+        frame_key = f"{prefix}_frames"
+
+        if drag_frames:
+            pet.all_animations[frame_key] = drag_frames
+
+        # 存储拖拽子序列的范围
+        for sub_name, ranges in group["ranges"].items():
+            pet.animation_ranges[f"{prefix}_{sub_name}"] = ranges
 
 class AnimationController:
     """
@@ -87,7 +149,8 @@ class AnimationController:
         'fishing': {'type': 'one_shot'},
         'bye': {'type': 'one_shot'},
         'upset': {'type': 'loop_reverse'},
-        "angry": {"type": "one_shot"},
+        'angry': {"type": "one_shot"},
+        'butterfly': {'type': 'loop_reverse'},
     }
 
     def __init__(self, animations_data, animation_ranges):

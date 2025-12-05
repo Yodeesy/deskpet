@@ -2,7 +2,7 @@
 // import { handleStaticFile } from './staticFile.js'
 // const config = JSON.parse(Deno.readTextFileSync('./src/backend/config.json'))
 const config = {
-    'pathname': '/zst',
+    'pathname': '/stories',
     'staticpath': './src/backend/static',
 }
 const NotFound404 = () => new Response('404 Not Found', { status: 404 })

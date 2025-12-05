@@ -96,7 +96,7 @@ ANIMATION_CONFIG = {
         "frame_w": 350,
         "frame_h": 350,
         "total_frames": 120,
-        "ranges": {"bye": (0, 119)}
+        "ranges": {"bye": (0, 80)}
     },
     "angry": {
         "filepath": "assets/angry.png",
@@ -112,6 +112,13 @@ ANIMATION_CONFIG = {
         "total_frames": 120,
         "ranges": {"upset": (0, 119)}
     },
+    "butterfly": {
+        "filepath": "assets/butterfly.png",
+        "frame_w": 350,
+        "frame_h": 350,
+        "total_frames": 120,
+        "ranges": {"butterfly": (0, 112)}
+    }
 }
 
 # Default configuration used if the config file does not exist
@@ -153,7 +160,7 @@ if __name__ == "__main__":
         # 3. Store tk_root in the pet instance for use by SettingsWindow and States
         pet.tk_root = tk_root
         # 启动轮询（主线程调用）
-        pet.tk_root.after(500, pet._start_queue_poller)
+        pet._start_queue_poller()
 
         # 4. Start the main application loop
         pet.run()

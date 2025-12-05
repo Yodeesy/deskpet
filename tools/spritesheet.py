@@ -67,8 +67,8 @@ if __name__ == "__main__":
     # 🌟 在这里设定您的目标尺寸 🌟
     TARGET_SIZE = (350, 350)  # W x H
 
-    FRAMES_FOLDER = "../extracted_sprites/upset"
-    OUTPUT_SPRITESHEET = "../assets/upset.png"
+    FRAMES_FOLDER = "../extracted_sprites/butterfly"
+    OUTPUT_SPRITESHEET = "../assets/butterfly.png"
     SPRITESHEET_COLS = 8
 
     create_uniform_spritesheet(FRAMES_FOLDER, OUTPUT_SPRITESHEET, cols=SPRITESHEET_COLS, target_size=TARGET_SIZE)

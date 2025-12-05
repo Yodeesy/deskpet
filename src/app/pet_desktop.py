@@ -5,13 +5,12 @@ import sys
 import win32con
 import win32gui
 import queue
-import traceback
 from typing import Union, Dict
 # Import created modules
 import window_manager as wm
-from pet_states import IdleState, TeleportState, MagicState, FishingState, UpsetState
+from pet_states import IdleState, TeleportState, MagicState, FishingState, UpsetState, ButterflyState
 from settings_gui import SettingsWindow
-from sprite_animation import load_frames_from_sheet, AnimationController
+from sprite_animation import load_animation, load_dragging_animations, AnimationController
 from effects import DynamicEffectController
 from story_manager import StoryManager
 from story_display import show_story_prompt
@@ -28,6 +27,7 @@ class DesktopPet:
 
         # --- Configuration Initialization ---
         self.config = initial_config
+        self.animation_config = animation_config
         self.rest_interval_ms = self.config.get("rest_interval_minutes", 60) * 60 * 1000
         self.rest_duration_ms = self.config.get("rest_duration_seconds", 30) * 1000
         self.fishing_cooldown_ms = self.config.get("fishing_cooldown_minutes", 10) * 60 * 1000
@@ -43,6 +43,7 @@ class DesktopPet:
         self.fishing_timer_start_time = pygame.time.get_ticks()
         self.upset_timer_start_time = pygame.time.get_ticks()
         self.angry_counter = 0
+        self.havering_start_time = pygame.time.get_ticks()
 
         # --- Size and Performance ---
         self.width = width
@@ -51,13 +52,14 @@ class DesktopPet:
         self.original_height = height
         self.display_width = 350  # Default size for settings follow mode
         self.display_height = 350
+        self.head_hover_height = 49
         self.fps = fps
         self.running = True
         self.clock = pygame.time.Clock()
 
         # --- Web Service and Story Management ---
         self.web_service_url = self.config.get("web_service_url", "https://deskfox.deno.dev")
-        self.pathname = self.config.get("pathname", "/zst")
+        self.pathname = self.config.get("pathname", "/stories")
         self.story_manager = StoryManager(self, self.web_service_url, self.pathname)
 
         # --- Window Setup ---
@@ -72,8 +74,8 @@ class DesktopPet:
         else:
             self.full_screen_width = pygame.display.Info().current_w
             self.full_screen_height = pygame.display.Info().current_h
-        start_x = (self.full_screen_width - self.width) // 2
-        start_y = (self.full_screen_height - self.height) // 2
+        start_x = self.config.get("current_x", (self.full_screen_width - self.width) // 2)
+        start_y = self.config.get("current_y", (self.full_screen_height - self.height) // 2)
 
         # Store current window position (mutable list [x, y])
         self.current_window_pos = [start_x, start_y]
@@ -87,108 +89,10 @@ class DesktopPet:
             pass
 
         # --- Animation Loading ---
-        all_animations = {}
+        self.all_animations = {}
         self.animation_ranges = {}
-
-        # Load Idle animation
-        idle_config = animation_config["idle"]
-        idle_frames = load_frames_from_sheet(
-            idle_config["filepath"], idle_config["frame_w"], idle_config["frame_h"],
-            self.width, self.height, idle_config["total_frames"]
-        )
-        all_animations['idle'] = idle_frames
-        self.animation_ranges["idle"] = idle_config["ranges"]["idle"]
-
-        # Load Display animation
-        display_config = animation_config["display"]
-        display_frames = load_frames_from_sheet(
-            display_config["filepath"], display_config["frame_w"], display_config["frame_h"],
-            self.width, self.height, display_config["total_frames"], no_scaling=True  # Frames not scaled at load time
-        )
-        all_animations['display'] = display_frames
-        self.animation_ranges['display'] = display_config["ranges"]["display"]
-
-        # Load Teleport animation
-        teleport_config = animation_config["teleport"]
-        teleport_frames = load_frames_from_sheet(
-            teleport_config["filepath"], teleport_config["frame_w"], teleport_config["frame_h"],
-            self.width, self.height, teleport_config["total_frames"]
-        )
-        all_animations['teleport'] = teleport_frames
-        self.animation_ranges['teleport'] = teleport_config["ranges"]["teleport"]
-
-        # Load Magic animation (for full screen effect)
-        magic_config = animation_config["magic"]
-        magic_frames = load_frames_from_sheet(
-            magic_config["filepath"], magic_config["frame_w"], magic_config["frame_h"],
-            self.width, self.height, magic_config["total_frames"], no_scaling=True  # Frames not scaled at load time
-        )
-        all_animations['magic'] = magic_frames
-        for sub_name, ranges in magic_config["ranges"].items():
-            self.animation_ranges[f"{sub_name}"] = ranges
-
-        # Load Fishing animation
-        fishing_config = animation_config["fishing"]
-        fishing_frames = load_frames_from_sheet(
-            fishing_config["filepath"], fishing_config["frame_w"], fishing_config["frame_h"],
-            self.width, self.height, fishing_config["total_frames"]
-        )
-        all_animations['fishing'] = fishing_frames
-        self.animation_ranges['fishing'] = fishing_config["ranges"]["fishing"]
-
-        # Load Bye animation
-        bye_config = animation_config["bye"]
-        bye_frames = load_frames_from_sheet(
-            bye_config["filepath"], bye_config["frame_w"], bye_config["frame_h"],
-            self.width, self.height, bye_config["total_frames"]
-        )
-        all_animations['bye'] = bye_frames
-        self.animation_ranges['bye'] = bye_config["ranges"]["bye"]
-
-        # Load Upset animation
-        upset_config = animation_config["upset"]
-        upset_frames = load_frames_from_sheet(
-            upset_config["filepath"], upset_config["frame_w"], upset_config["frame_h"],
-            self.width, self.height, upset_config["total_frames"]
-        )
-        all_animations['upset'] = upset_frames
-        self.animation_ranges['upset'] = upset_config["ranges"]["upset"]
-
-        # Load Angry animation
-        angry_config = animation_config["angry"]
-        angry_frames = load_frames_from_sheet(
-            angry_config["filepath"], angry_config["frame_w"], angry_config["frame_h"],
-            self.width, self.height, angry_config["total_frames"]
-        )
-        all_animations['angry'] = angry_frames
-        self.animation_ranges['angry'] = angry_config["ranges"]["angry"]
-
-        # Load all Dragging options
-        dragging_options = animation_config["dragging"]
-        self.available_drag_prefixes = []  # e.g., ['drag_A', 'drag_B']
-
-        for group in dragging_options:
-            prefix = group["prefix"]
-            self.available_drag_prefixes.append(prefix)
-
-            drag_frames = load_frames_from_sheet(
-                group["filepath"],
-                group["frame_w"],
-                group["frame_h"],
-                self.width,
-                self.height,
-                group["total_frames"]
-            )
-            frame_key = f"{prefix}_frames"
-
-            if drag_frames:
-                all_animations[frame_key] = drag_frames
-
-            # Store frame ranges for sub-sequences (e.g., self.animation_ranges['drag_A_start'])
-            for sub_name, ranges in group["ranges"].items():
-                self.animation_ranges[f"{prefix}_{sub_name}"] = ranges
-
-        self.animator = AnimationController(all_animations, self.animation_ranges)
+        self._load_animations()
+        self.animator = AnimationController(self.all_animations, self.animation_ranges)
 
         # --- Runtime State and Resources ---
         self.drag_start_pos = None  # Mouse screen position at drag start
@@ -206,6 +110,30 @@ class DesktopPet:
         self._tk_queue = queue.Queue()
         # 用于存储 after() 返回的 ID，以便取消重复的轮询
         self._poller_id = None
+        self.if_first_havering = True
+
+    def _load_animations(self):
+        """加载所有动画"""
+        # Load Idle animation
+        load_animation(self, 'idle')
+        # Load Display animation
+        load_animation(self, 'display', no_scaling=True)
+        # Load Teleport animation
+        load_animation(self, 'teleport')
+        # Load Magic animation (for full screen effect)
+        load_animation(self, 'magic', no_scaling=True, is_magic_type=True)
+        # Load Fishing animation
+        load_animation(self, 'fishing')
+        # Load Bye animation
+        load_animation(self, 'bye')
+        # Load Upset animation
+        load_animation(self, 'upset')
+        # Load Angry animation
+        load_animation(self, 'angry')
+        # Load Butterfly animation
+        load_animation(self, 'butterfly')
+        # Load all Dragging options
+        load_dragging_animations(self)
 
     # --- Queue Poller Methods ---
     def _start_queue_poller(self):
@@ -225,39 +153,37 @@ class DesktopPet:
 
     def _process_queue(self):
         """
-        [主執行緒調用] 持續處理隊列中的所有待處理項。
-        此方法是線程安全的，因為它始終在主執行緒中執行。
+        主线程处理事件队列
         """
-        try:
-            # 循環直到隊列為空
-            while True:
-                # 使用 get_nowait() 進行非阻塞獲取
+        # 每轮最多处理 5 个事件
+        MAX_ITEMS_PER_TICK = 5
+
+        processed = 0
+        while processed < MAX_ITEMS_PER_TICK:
+            try:
                 item = self._tk_queue.get_nowait()
-                print(f"DEBUG: Got item from queue: {item}", flush=True)
+            except queue.Empty:
+                break
 
-                # item 結構: ("story_result", is_successful, payload, story_id)
-                if isinstance(item, tuple) and item[0] == "story_result":
-                    _, is_successful, payload, story_id = item
-                    # 安全地在主執行緒調用處理函數
-                    self.handle_fishing_result(is_successful=is_successful, story_data_or_error=payload, story_id=story_id)
-                else:
-                    print(f"WARNING: Unknown item in queue: {item}", flush=True)
+            processed += 1
+            print(f"DEBUG: Queue item: {item}", flush=True)
 
-        except queue.Empty:
-            # 隊列為空，這是正常退出
-            pass
-        except Exception as e:
-            # 捕獲處理隊列項時的意外錯誤
-            print(f"FATAL ERROR: Failed to process item in queue: {e}", file=sys.stderr, flush=True)
-            traceback.print_exc(file=sys.stderr)
-
-        finally:
-            # 無論如何，都再次安排下一次輪詢
-            if self.tk_root and self.tk_root.winfo_exists():
-                print("DEBUG: Scheduling next poll", flush=True)
-                self._poller_id = self.tk_root.after(100, self._process_queue)
+            # 处理钓鱼结果
+            if isinstance(item, tuple) and item[0] == "story_result":
+                _, is_successful, payload, story_id = item
+                self.handle_fishing_result(
+                    is_successful=is_successful,
+                    story_data_or_error=payload,
+                    story_id=story_id
+                )
             else:
-                print("WARNING: Tkinter root destroyed, stopping poller.", flush=True)
+                print(f"WARNING: Unknown item in queue: {item}", flush=True)
+
+        # GUI 永远不会被阻塞
+        if self.tk_root and self.tk_root.winfo_exists():
+            self._poller_id = self.tk_root.after(250, self._process_queue)
+        else:
+            print("WARNING: Tk root destroyed, stopping poller", flush=True)
 
     def handle_fishing_result(self, is_successful, story_data_or_error: Union[Dict, str], story_id=None):
         """
@@ -292,10 +218,39 @@ class DesktopPet:
         # Update the current state logic (animation, position, transitions)
         self.state.update()
 
+        # 只有在 IdleState 或 ButterflyState 之間切換
+        is_hovering = self.is_mouse_over_head()
+
+        if is_hovering and isinstance(self.state, IdleState):
+            # Only update havering_start_time when havering for the first time
+            if self.if_first_havering:
+                self.havering_start_time = pygame.time.get_ticks()
+                self.if_first_havering = False
+
+            if self._is_hovering_ready():
+                # 懸停在頭部，從 Idle 進入 Butterfly 狀態
+                self.change_state(ButterflyState(self))
+
+        elif not is_hovering and isinstance(self.state, ButterflyState):
+            # 鼠標移走，從 Butterfly 退出回到 Idle 狀態
+            self.change_state(IdleState(self))
+            self.if_first_havering = True
+
         # Check the reminder timers
         self._check_rest_timer()
         self._check_fishing_timer()
         self._check_upset_timer()
+
+    def _is_hovering_ready(self):
+        """
+        Checks if the hover timer has expired.
+        """
+        current_time = pygame.time.get_ticks()
+        elapsed_time = current_time - self.havering_start_time
+
+        if elapsed_time >= 1989.0604:
+            return True
+        return False
 
     def _check_rest_timer(self):
         """
@@ -556,6 +511,29 @@ class DesktopPet:
 
         self.state = new_state
         self.state.enter()
+
+    def is_mouse_over_head(self):
+        """
+        实时检测鼠标是否悬停在 Pet 窗口的头部区域
+        通过检查窗口焦点和鼠标位置来判断
+        """
+        # 只有在小尺寸（原始宽高）时才允许悬停触发
+        if self.width != self.original_width or self.height != self.original_height:
+            return False
+        # 1. 检查鼠标是否在窗口内（获得焦点）
+        if not pygame.mouse.get_focused():
+            return False
+        # 2. 获取当前鼠标位置
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        # 3. 检查鼠标是否在窗口内
+        is_in_window = 0 <= mouse_x < self.width and 0 <= mouse_y < self.height
+        # 4. 如果不在窗口内，返回 False
+        if not is_in_window:
+            return False
+        # 5. 检查是否在头部区域
+        is_in_head = mouse_y < self.head_hover_height
+
+        return is_in_head
 
     def is_click_on_sprite(self, mouse_x, mouse_y):
         """Checks if the mouse click is on a non-transparent area of the pet sprite."""

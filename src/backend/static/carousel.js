@@ -9,7 +9,7 @@ let currentIndex = 0
 let autoPlayInterval
 
 function init() {
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 8; i++) {
         const img = document.createElement('img')
         img.src = `./pics/图片${i + 1}.png`
         img.alt = `图片${i + 1}`

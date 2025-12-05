@@ -48,8 +48,12 @@
     width: 80%;
     opacity: 0;
     transition: opacity 0.5s ease;
-
-    font-size: 20px;
+    text-align: left; /* 改为左对齐 */
+    font-family:
+        "SF Pro Display",
+        "Segoe UI",
+        sans-serif;
+    font-size: 19px;
 }
 
 .des-carousel-track p.active {

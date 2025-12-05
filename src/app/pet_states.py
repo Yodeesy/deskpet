@@ -143,6 +143,7 @@ class DraggingState(PetState):
     def _update_position(self):
         """Handles position update, boundary checking, elastic effects, and smoothing."""
         try:
+            from config_manager import save_config
             # Get current absolute mouse position
             current_mouse_pos = wm.get_mouse_screen_pos()
 
@@ -202,6 +203,10 @@ class DraggingState(PetState):
             # Update stored window position
             self.pet.current_window_pos[0] = final_x
             self.pet.current_window_pos[1] = final_y
+
+            self.pet.tk_root.config["current_x"] = final_x
+            self.pet.tk_root.config["current_y"] = final_y
+            save_config(self.pet.tk_root.config)
 
         except Exception:
             # Safety fallback: switch back to IdleState on error (e.g., if Pygame window is missing)
@@ -440,6 +445,29 @@ class AngryState(PetState):
             else:
                 self.pet.angry_counter += 1
                 self.pet.change_state(IdleState(self.pet))
+
+    def exit(self):
+        pass
+
+class ButterflyState(PetState):
+    """
+    用户鼠标悬停
+    """
+    def enter(self):
+        self.pet.animator.set_animation('butterfly')
+
+    def update(self):
+        super().update()
+
+    def handle_event(self, event):
+        """Detects left mouse button down for dragging."""
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # Left click
+            mouse_rel_pos = pygame.mouse.get_pos()
+
+            # Check if the click is on a non-transparent area of the sprite
+            if self.pet.is_click_on_sprite(mouse_rel_pos[0], mouse_rel_pos[1]):
+                # Switch to DraggingState
+                self.pet.change_state(DraggingState(self.pet))
 
     def exit(self):
         pass

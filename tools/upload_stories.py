@@ -81,7 +81,7 @@ if __name__ == "__main__":
 
     # --- 配置 Web 服务连接 ---
     WEB_BASE_URL = "https://deskfox.deno.dev"
-    WEB_PATHNAME = "/zst"
+    WEB_PATHNAME = "/stories"
     # ---------------------------
 
     print("-" * 50)
